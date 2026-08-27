@@ -6,6 +6,11 @@ output "backend_role_arn" {
   value       = aws_iam_role.backend.arn
 }
 
+output "backend_role_name" {
+  description = "Name of the backend EC2 role — needed by later phases that attach additional policies (e.g. Phase 5's SSM access)"
+  value       = aws_iam_role.backend.name
+}
+
 output "backend_instance_profile_name" {
   description = "Name of the instance profile Phase 4's EC2 instance will attach"
   value       = aws_iam_instance_profile.backend.name

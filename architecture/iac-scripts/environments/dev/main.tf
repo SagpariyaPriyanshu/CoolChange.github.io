@@ -22,10 +22,27 @@ module "database" {
   name_prefix = local.name_prefix
   common_tags = local.common_tags
 
-  private_subnet_ids          = module.networking.private_subnet_ids
-  database_security_group_id  = module.networking.database_security_group_id
-  backend_security_group_id   = module.networking.backend_security_group_id
+  private_subnet_ids         = module.networking.private_subnet_ids
+  database_security_group_id = module.networking.database_security_group_id
+  backend_security_group_id  = module.networking.backend_security_group_id
 
   # engine_version, instance_class, allocated_storage, db_name, and
   # db_username all use the module's small/cheap dev defaults.
+}
+
+module "compute" {
+  source = "../../modules/compute"
+
+  name_prefix = local.name_prefix
+  common_tags = local.common_tags
+
+  public_subnet_ids         = module.networking.public_subnet_ids
+  backend_security_group_id = module.networking.backend_security_group_id
+  alb_security_group_id     = module.networking.alb_security_group_id
+
+  instance_profile_name = module.iam.backend_instance_profile_name
+  backend_role_name     = module.iam.backend_role_name
+
+  # instance_type, app_port, and admin_cidr_blocks all use the module's
+  # defaults — revisit app_port once the backend framework is settled.
 }
