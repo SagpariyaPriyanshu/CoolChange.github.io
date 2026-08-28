@@ -66,3 +66,22 @@ module "loadbalancer" {
   # app_port placeholder as the compute module, health_check_path is
   # "/" until confirmed with the BE lead.
 }
+
+module "frontend" {
+  source = "../../modules/frontend"
+
+  # Hands this module both AWS connections: the default one (for S3 and
+  # CloudFront, which aren't region-scoped) and the us_east_1-aliased one
+  # from provider.tf (required for the ACM certificate). The module's own
+  # configuration_aliases declaration in acm.tf is what makes it able to
+  # accept this second one at all.
+  providers = {
+    aws            = aws
+    aws.us_east_1  = aws.us_east_1
+  }
+
+  name_prefix = local.name_prefix
+  common_tags = local.common_tags
+
+  domain_name = "www.${local.domain_name}"
+}
