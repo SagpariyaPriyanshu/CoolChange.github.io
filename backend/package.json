@@ -1,0 +1,32 @@
+{
+  "name": "coolchange-backend",
+  "version": "0.1.0",
+  "description": "CoolChange API — Story 0.3 database and read-only backend (FOXES EAT IT)",
+  "main": "src/index.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "test": "jest",
+    "migrate": "node src/db/migrate.js",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:logs": "docker compose logs -f db"
+  },
+  "keywords": [],
+  "author": "FOXES EAT IT",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "pg": "^8.13.1"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "nodemon": "^3.1.9",
+    "supertest": "^7.0.0"
+  }
+}

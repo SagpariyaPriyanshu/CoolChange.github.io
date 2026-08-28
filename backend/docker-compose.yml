@@ -1,0 +1,21 @@
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    container_name: coolchange-db
+    environment:
+      POSTGRES_DB: coolchange
+      POSTGRES_USER: coolchange
+      POSTGRES_PASSWORD: coolchange
+    ports:
+      # 5433 on the host avoids clashing with a local Homebrew Postgres on 5432
+      - "5433:5432"
+    volumes:
+      - coolchange_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U coolchange -d coolchange"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  coolchange_pgdata:
