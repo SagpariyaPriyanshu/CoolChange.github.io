@@ -46,3 +46,23 @@ module "compute" {
   # instance_type, app_port, and admin_cidr_blocks all use the module's
   # defaults — revisit app_port once the backend framework is settled.
 }
+
+module "loadbalancer" {
+  source = "../../modules/loadbalancer"
+
+  name_prefix = local.name_prefix
+  common_tags = local.common_tags
+
+  vpc_id                     = module.networking.vpc_id
+  public_subnet_ids          = module.networking.public_subnet_ids
+  alb_security_group_id      = module.networking.alb_security_group_id
+  backend_security_group_id  = module.networking.backend_security_group_id
+
+  backend_instance_id = module.compute.instance_id
+
+  domain_name = local.backend_domain_name
+
+  # app_port and health_check_path use the module's defaults — same
+  # app_port placeholder as the compute module, health_check_path is
+  # "/" until confirmed with the BE lead.
+}
