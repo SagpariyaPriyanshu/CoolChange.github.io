@@ -97,9 +97,11 @@ COMMENT ON COLUMN mesh_block.area_sqkm IS
 
 COMMENT ON COLUMN mesh_block.irsd_score IS
     'SEIFA Index of Relative Socio-economic Disadvantage, SA1 level, 2016. '
-    'NULL for ~1,345 blocks (2.5%): the ABS suppresses SEIFA for SA1s with '
-    'very small populations, and 88.4% of those blocks have zero residents. '
-    'A NULL here is correct data, not a failed join. Never render it as 0.';
+    'NULL for 1,477 blocks (2.7%), from two ABS confidentiality behaviours: '
+    '1,345 blocks whose SA1 is absent from the SEIFA release entirely (290 '
+    'SA1s) and 132 whose SA1 is listed but has its score suppressed as "-" '
+    '(15 SA1s). 86.9% of them have zero residents. A NULL here is correct '
+    'data, not a failed join. Never render it as 0.';
 
 COMMENT ON COLUMN mesh_block.irsd_decile IS
     'SEIFA IRSD decile. 1 = most disadvantaged, 10 = least disadvantaged.';
@@ -116,12 +118,12 @@ CREATE INDEX ix_mesh_block_sa2_name_lower ON mesh_block (LOWER(sa2_name) varchar
 
 
 -- -----------------------------------------------------------------------------
--- projection_metro -- the 2050 context layer, city-wide. Exactly 4 rows.
+-- projection_metro -- the city-wide 2050 figure. Exactly 4 rows.
 --
--- READ THIS BEFORE BUILDING THE 2050 TOGGLE.
--- Metropolitan Melbourne falls inside a SINGLE band at each warming level, so
--- the scenario control changes a city-wide NUMBER, not the choropleth. The map
--- only re-colours when the canopy slider moves.
+-- These are the MODAL band for metro Melbourne at each warming level, used for
+-- headline copy and as the US3.2.5 fallback for blocks with no row in
+-- mesh_block_projection. Per-block bands live in that table and DO vary across
+-- the city -- see its comment.
 -- -----------------------------------------------------------------------------
 CREATE TABLE projection_metro (
     warming_level  NUMERIC(2,1) PRIMARY KEY,
@@ -180,10 +182,18 @@ CREATE TABLE mesh_block_projection (
 
 COMMENT ON TABLE mesh_block_projection IS
     'Projected days >= 35 C per mesh block per warming level, from a spatial '
-    'join of mesh block centroids to the ACS polygons. Expected to be near '
-    'uniform across metro Melbourne -- if it is not, that is a finding worth '
-    'checking before shipping. Absence of a row = outside every polygon '
-    '(US3.2.5), NOT missing data.';
+    'join of mesh block representative points to the ACS band polygons. '
+    '204,532 rows covering 51,133 of the 54,239 blocks. The bands DO vary '
+    'geographically: at 2.0 (2050) Melton runs 15+ days and the Mornington '
+    'Peninsula 1-5, while 86% of the city sits at 10-15. At 1.5 (2030) the '
+    'split is a genuine two-band north-west vs south-east gradient (33,756 vs '
+    '16,528 blocks). The variation is COARSE -- three or four discrete classes, '
+    'not a smooth surface -- so render it as banded classes, never as a '
+    'continuous ramp. Absence of a row = the block falls outside every ACS '
+    'polygon (US3.2.5): 3,106 coastal blocks in Port Phillip, Kingston, '
+    'Bayside, Hobsons Bay and the Mornington Peninsula, holding 3.9% of the '
+    'metro population. That is NOT missing data -- fall back to '
+    'projection_metro and label the figure as city-wide.';
 
 
 -- -----------------------------------------------------------------------------
@@ -195,7 +205,10 @@ COMMENT ON TABLE mesh_block_projection IS
 -- -----------------------------------------------------------------------------
 CREATE TABLE area_baseline (
     area_type          VARCHAR(8)   NOT NULL,
-    area_code          VARCHAR(11)  NOT NULL,
+    -- Wide enough for an LGA name used as the code: metro Melbourne has no
+    -- numeric LGA identifier in the source data, so the name IS the key, and
+    -- "Mornington Peninsula (S)" is 24 characters.
+    area_code          VARCHAR(64)  NOT NULL,
     area_name          VARCHAR(64)  NOT NULL,
     scope              VARCHAR(12)  NOT NULL,
 
@@ -252,7 +265,9 @@ CREATE TABLE model_coefficient (
     model_id     SERIAL       PRIMARY KEY,
     model_type   VARCHAR(16)  NOT NULL,
     scope_type   VARCHAR(8)   NOT NULL,
-    scope_code   VARCHAR(11)  NOT NULL,
+    -- VARCHAR(64) for the same reason as area_baseline.area_code: an LGA-scope
+    -- GWR fit in Iteration 2 is keyed by LGA name.
+    scope_code   VARCHAR(64)  NOT NULL,
 
     slope        REAL         NOT NULL,
     intercept    REAL         NOT NULL,

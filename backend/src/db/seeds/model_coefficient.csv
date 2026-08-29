@@ -1,0 +1,2 @@
+model_type,scope_type,scope_code,slope,intercept,pearson_r,r_squared,n_blocks,is_active,notes
+OLS_GLOBAL,METRO,METRO,-0.122852,10.050744,-0.570602,0.325586,54239,true,"Global OLS on all 54,239 blocks. Benchmark (Sun et al. 2019, n=55,603): slope -0.1274, r -0.585, R2 0.34. Association, not a controlled experiment."
