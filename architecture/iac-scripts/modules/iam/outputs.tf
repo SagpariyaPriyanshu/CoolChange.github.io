@@ -15,3 +15,18 @@ output "backend_instance_profile_name" {
   description = "Name of the instance profile Phase 4's EC2 instance will attach"
   value       = aws_iam_instance_profile.backend.name
 }
+
+# New in Phase 9 — the environment layer wires these into the GitHub
+# Actions workflow YAML files (as the `role-to-assume` input for the
+# official aws-actions/configure-aws-credentials action), so each
+# workflow authenticates as the right role for what it does.
+
+output "github_actions_deploy_role_arn" {
+  description = "ARN of the narrow CI role used by the frontend/backend deploy workflows"
+  value       = aws_iam_role.github_actions_deploy.arn
+}
+
+output "github_actions_terraform_role_arn" {
+  description = "ARN of the broader CI role used by the terraform plan/apply workflow"
+  value       = aws_iam_role.github_actions_terraform.arn
+}
