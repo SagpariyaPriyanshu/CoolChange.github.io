@@ -85,3 +85,18 @@ module "frontend" {
 
   domain_name = "www.${local.domain_name}"
 }
+
+module "secrets" {
+  source = "../../modules/secrets"
+
+  name_prefix = local.name_prefix
+  common_tags = local.common_tags
+
+  # Add real secrets here as they come up, e.g.:
+  # app_secrets = {
+  #   "heat-data-api-key" = "the-actual-key-value"
+  # }
+  # Each entry becomes coolchange-dev/<name> in Secrets Manager,
+  # already readable by the backend thanks to Phase 2's IAM policy.
+  app_secrets = {}
+}

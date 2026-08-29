@@ -38,3 +38,31 @@ output "frontend_certificate_validation_record_value" {
   description = "CNAME record value to add in Namecheap for the frontend (www.coolchange.me) ACM validation"
   value       = module.frontend.certificate_validation_record_value
 }
+
+# Phase 8 — the "app code wiring" half: everything Phase 9's CI/CD
+# pipeline will need to know where to deploy to, gathered in one place
+# instead of buried inside each module.
+output "db_secret_arn" {
+  description = "Secrets Manager ARN for the DB connection info — the backend reads its DB credentials from here at runtime"
+  value       = module.database.db_secret_arn
+}
+
+output "backend_instance_id" {
+  description = "EC2 instance ID the backend deploys to"
+  value       = module.compute.instance_id
+}
+
+output "frontend_bucket_name" {
+  description = "S3 bucket the frontend build gets synced into"
+  value       = module.frontend.bucket_name
+}
+
+output "cloudfront_distribution_id" {
+  description = "CloudFront distribution ID — needed to invalidate the cache after each frontend deploy"
+  value       = module.frontend.cloudfront_distribution_id
+}
+
+output "app_secret_arns" {
+  description = "Map of app secret name to ARN, from the secrets module (empty until a real secret is added)"
+  value       = module.secrets.secret_arns
+}
