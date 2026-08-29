@@ -164,7 +164,10 @@ VALUES
 
 
 -- -----------------------------------------------------------------------------
--- mesh_block_projection -- per-block bands. ~217k rows (54,239 x 4).
+-- mesh_block_projection -- per-block bands. 204,532 rows over 51,133 blocks.
+--
+-- Not 54,239 x 4: 3,106 coastal blocks fall outside every ACS polygon and
+-- get no row at all. See the table comment below.
 --
 -- A block with NO ROWS here falls outside every projection polygon. That is
 -- US3.2.5, and it is real: coastal blocks do it. The API falls back to
@@ -374,3 +377,52 @@ CREATE INDEX ix_mesh_block_geometry_gist ON mesh_block_geometry USING GIST (geom
 COMMENT ON TABLE mesh_block_geometry IS
     'Optional. Server-side point-in-polygon lookups only. Geometry for '
     'rendering is served as a static asset, never through the API.';
+
+
+-- -----------------------------------------------------------------------------
+-- equity_by_decile -- the measured heat/disadvantage gradient (Epic 7).
+--
+-- Adopted from Yipu's schema draft, which reproduced these figures
+-- independently in SQL while the pipeline computed them in pandas. Both agree
+-- to two decimal places across all ten deciles, which is the strongest
+-- validation available for this finding.
+--
+-- Extended here with the ALL / RESIDENTIAL scope split used everywhere else in
+-- this schema, because the ALL scope includes parkland and industrial blocks
+-- whose SEIFA decile describes the people in the surrounding SA1, not anyone
+-- living on the block.
+--
+-- Blocks with no SEIFA are excluded, so the counts sum to 52,762, not 54,239.
+-- That is correct: a block with no decile cannot be grouped by decile.
+-- -----------------------------------------------------------------------------
+CREATE MATERIALIZED VIEW equity_by_decile AS
+    SELECT 'ALL'::VARCHAR(12)         AS scope,
+           irsd_decile,
+           count(*)                   AS n_blocks,
+           avg(uhi_mean)::REAL        AS mean_uhi,
+           stddev(uhi_mean)::REAL     AS stddev_uhi,
+           avg(canopy_pct)::REAL      AS mean_canopy_pct,
+           sum(persons)               AS persons
+      FROM mesh_block
+     WHERE irsd_decile IS NOT NULL
+     GROUP BY irsd_decile
+    UNION ALL
+    SELECT 'RESIDENTIAL'::VARCHAR(12),
+           irsd_decile,
+           count(*),
+           avg(uhi_mean)::REAL,
+           stddev(uhi_mean)::REAL,
+           avg(canopy_pct)::REAL,
+           sum(persons)
+      FROM mesh_block
+     WHERE irsd_decile IS NOT NULL AND mb_category = 'Residential'
+     GROUP BY irsd_decile;
+
+CREATE UNIQUE INDEX ux_equity_by_decile ON equity_by_decile (scope, irsd_decile);
+
+COMMENT ON MATERIALIZED VIEW equity_by_decile IS
+    'Mean heat and canopy by SEIFA IRSD decile (1 = most disadvantaged). Backs '
+    'the equity chart in Epic 7. Refresh after every seed reload: '
+    'REFRESH MATERIALIZED VIEW equity_by_decile. State the finding as a '
+    'gradient, not a rule -- r between IRSD score and canopy is only +0.28, so '
+    'plenty of hot blocks sit in advantaged areas.';
