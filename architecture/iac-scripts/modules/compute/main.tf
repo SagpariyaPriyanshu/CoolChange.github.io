@@ -30,6 +30,19 @@ resource "aws_instance" "backend" {
   # the security group (file 3), not by whether a public IP exists.
   associate_public_ip_address = true
 
+  # Renders templates/user_data.sh.tpl with these values substituted in,
+  # then runs the result once on first boot. Changing user_data forces
+  # Terraform to replace the instance (a new one boots with the new
+  # script) rather than editing it in place — AWS doesn't support
+  # re-running user_data on a live instance.
+  user_data = templatefile("${path.module}/templates/user_data.sh.tpl", {
+    aws_region             = var.aws_region
+    repo_ssh_url            = var.github_repo_ssh_url
+    deploy_key_secret_arn  = var.deploy_key_secret_arn
+    db_secret_arn          = var.db_secret_arn
+    app_port                = var.app_port
+  })
+
   tags = merge(var.common_tags, {
     Name = "${var.name_prefix}-backend"
   })
