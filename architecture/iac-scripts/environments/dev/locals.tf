@@ -29,4 +29,11 @@ locals {
   github_org          = "SagpariyaPriyanshu"
   github_repo         = "CoolChange.github.io"
   github_repo_ssh_url = "git@github.com:${local.github_org}/${local.github_repo}.git"
+
+  # Single source of truth for the backend's listening port — passed
+  # explicitly into both the compute and loadbalancer modules below,
+  # rather than relying on their two separate app_port variables'
+  # defaults happening to match each other. Change it here once if the
+  # app's port ever changes, instead of hunting through multiple files.
+  backend_app_port = 3000
 }

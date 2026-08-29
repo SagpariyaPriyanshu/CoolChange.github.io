@@ -9,10 +9,11 @@ resource "aws_vpc_security_group_ingress_rule" "backend_from_alb" {
   description = "Allow app traffic from the ALB only"
 }
 
-# Backend -> internet: HTTPS only, for external APIs, Secrets Manager,
-# and OS package updates. Needed because there's no NAT gateway and the
-# backend's security group otherwise has zero outbound rules beyond the
-# database access rule added in Phase 3.
+# Backend -> internet: HTTPS, for external APIs, Secrets Manager, the
+# GitHub SSH-over-443 clone, NodeSource, and the AWS CLI installer.
+# Needed because there's no NAT gateway and the backend's security group
+# otherwise has zero outbound rules beyond the database access rule
+# added in Phase 3.
 resource "aws_vpc_security_group_egress_rule" "backend_to_internet_https" {
   security_group_id = var.backend_security_group_id
   cidr_ipv4          = "0.0.0.0/0"
@@ -21,6 +22,23 @@ resource "aws_vpc_security_group_egress_rule" "backend_to_internet_https" {
   ip_protocol        = "tcp"
 
   description = "Allow outbound HTTPS to anywhere"
+}
+
+# Backend -> internet: HTTP. Added in Phase 9 after the boot script
+# actually failed on this — Ubuntu's default apt mirrors
+# (*.ec2.archive.ubuntu.com, security.ubuntu.com) serve packages over
+# plain HTTP, not HTTPS, so apt-get install had no way to reach them
+# with only port 443 open. The original Phase 5 comment assumed HTTPS
+# alone would cover "OS package updates" — it doesn't, for this
+# specific case.
+resource "aws_vpc_security_group_egress_rule" "backend_to_internet_http" {
+  security_group_id = var.backend_security_group_id
+  cidr_ipv4          = "0.0.0.0/0"
+  from_port          = 80
+  to_port            = 80
+  ip_protocol        = "tcp"
+
+  description = "Allow outbound HTTP to anywhere (needed for apt package mirrors)"
 }
 
 # SSM Session Manager access — lets the team open a shell on this

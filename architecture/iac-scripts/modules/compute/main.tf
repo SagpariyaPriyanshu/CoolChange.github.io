@@ -31,10 +31,7 @@ resource "aws_instance" "backend" {
   associate_public_ip_address = true
 
   # Renders templates/user_data.sh.tpl with these values substituted in,
-  # then runs the result once on first boot. Changing user_data forces
-  # Terraform to replace the instance (a new one boots with the new
-  # script) rather than editing it in place — AWS doesn't support
-  # re-running user_data on a live instance.
+  # then runs the result once on first boot.
   user_data = templatefile("${path.module}/templates/user_data.sh.tpl", {
     aws_region             = var.aws_region
     repo_ssh_url            = var.github_repo_ssh_url
@@ -42,6 +39,17 @@ resource "aws_instance" "backend" {
     db_secret_arn          = var.db_secret_arn
     app_port                = var.app_port
   })
+
+  # Without this, the AWS provider's default behavior is to update
+  # user_data in place on the existing instance — which AWS accepts,
+  # but silently does nothing with, since cloud-init only ever runs
+  # user_data once, at an instance's first boot. Setting this to true
+  # makes Terraform destroy and recreate the instance whenever
+  # user_data changes, which is what actually causes the new script to
+  # run. Needed here specifically because this instance already exists
+  # (from Phase 5, with no user_data at all) and is only now getting
+  # its first real bootstrap script.
+  user_data_replace_on_change = true
 
   tags = merge(var.common_tags, {
     Name = "${var.name_prefix}-backend"

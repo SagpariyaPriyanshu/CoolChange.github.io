@@ -49,8 +49,7 @@ module "compute" {
   backend_role_name     = module.iam.backend_role_name
 
   # instance_type and admin_cidr_blocks use the module's defaults.
-  # app_port now defaults to the confirmed real value (3000) — see
-  # modules/compute/variables.tf.
+  app_port = local.backend_app_port
 
   # New in Phase 9 — everything the boot script (user_data.sh.tpl) needs
   # to pull the backend code and wire it up to the database.
@@ -75,9 +74,12 @@ module "loadbalancer" {
 
   domain_name = local.backend_domain_name
 
-  # app_port and health_check_path use the module's defaults — same
-  # app_port placeholder as the compute module, health_check_path is
-  # "/" until confirmed with the BE lead.
+  # app_port passed explicitly from the same shared local as the compute
+  # module above, so the two can no longer drift out of sync the way
+  # they did earlier in Phase 9. health_check_path uses the module's
+  # default, now corrected to the confirmed real value ("/health") — see
+  # modules/loadbalancer/variables.tf.
+  app_port = local.backend_app_port
 }
 
 module "frontend" {

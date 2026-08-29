@@ -16,7 +16,15 @@ resource "aws_lb" "backend" {
 # port, with a periodic health check so the ALB knows if it stops
 # responding.
 resource "aws_lb_target_group" "backend" {
-  name        = "${var.name_prefix}-backend-tg"
+  # name_prefix instead of a fixed name — required for the
+  # create_before_destroy lifecycle below to actually work. AWS target
+  # group names must be unique, so if this still had a fixed name,
+  # Terraform couldn't create the replacement while the original (with
+  # that same name) still exists; name_prefix lets AWS append its own
+  # random suffix so both can briefly coexist. Capped at 6 characters —
+  # an AWS-specific limit for this argument, tighter than most other
+  # resources' name_prefix.
+  name_prefix = "tg-"
   port        = var.app_port
   protocol    = "HTTP"
   vpc_id      = var.vpc_id
@@ -31,7 +39,20 @@ resource "aws_lb_target_group" "backend" {
     interval            = 30
   }
 
-  tags = var.common_tags
+  tags = merge(var.common_tags, {
+    Name = "${var.name_prefix}-backend-tg"
+  })
+
+  # Learned the hard way in Phase 9: without this, changing port (or
+  # anything else that forces replacement) makes Terraform try to
+  # delete the old target group before creating a new one — but AWS
+  # refuses that delete while a listener still points at it, since the
+  # listener update itself can't happen until the new target group
+  # exists. This flips the order: create the new one, repoint the
+  # listener, THEN delete the old one — no gap with a broken listener.
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 # Registers the actual backend EC2 instance (from Phase 5) as the one

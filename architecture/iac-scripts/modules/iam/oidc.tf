@@ -9,9 +9,11 @@ resource "aws_iam_openid_connect_provider" "github_actions" {
 
   # AWS stopped actually validating this value against GitHub's real
   # certificate back in 2022 — IAM now checks against its own trusted
-  # root CA list instead — but the API still requires a value here.
-  # This is GitHub's well-documented, stable thumbprint.
-  thumbprint_list = ["6938fd4d98bab03faadb97b34396831e3780aea"]
+  # root CA list instead — but the API still requires a syntactically
+  # valid 40-character value here. Captured directly from GitHub's own
+  # OIDC endpoint (token.actions.githubusercontent.com) rather than a
+  # hardcoded/remembered value, to be certain it's actually correct.
+  thumbprint_list = ["227203b5317f3818cab5b5ce596132bf36748c0e"]
 
   tags = var.common_tags
 }

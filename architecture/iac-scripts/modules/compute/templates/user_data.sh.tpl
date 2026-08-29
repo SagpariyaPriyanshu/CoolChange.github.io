@@ -1,8 +1,13 @@
 #!/bin/bash
 # Terraform template (rendered via templatefile() in main.tf) — anything
-# written as ${...} below is a Terraform variable substituted in at plan
-# time; anything written as $${...} is a literal shell variable, escaped
-# so Terraform leaves it alone and bash evaluates it at boot time instead.
+# written as a single dollar sign followed by curly braces below is a
+# Terraform variable substituted in at plan time; anything written with
+# a doubled dollar sign is a literal shell variable, escaped so Terraform
+# leaves it alone and bash evaluates it at boot time instead. (Written
+# this way, rather than showing the literal syntax, because this comment
+# itself gets parsed by templatefile() same as the rest of the file —
+# writing the literal single-dollar form here previously broke the plan
+# with a parse error.)
 set -euo pipefail
 
 exec > >(tee -a /var/log/user-data.log) 2>&1
@@ -35,12 +40,19 @@ aws secretsmanager get-secret-value \
   --secret-id "${deploy_key_secret_arn}" \
   --query SecretString --output text > /root/.ssh/coolchange_deploy_key
 chmod 600 /root/.ssh/coolchange_deploy_key
-ssh-keyscan -H github.com >> /root/.ssh/known_hosts 2>/dev/null
 
 # GitHub SSH over port 443 instead of the default 22 — the backend
-# security group only allows outbound HTTPS (443), so rather than
-# opening another egress port for this one operation, we use GitHub's
-# officially supported ssh.github.com:443 endpoint instead.
+# security group only allows outbound HTTP/HTTPS (80/443), so rather
+# than opening another egress port for this one operation, we use
+# GitHub's officially supported ssh.github.com:443 endpoint instead.
+#
+# No ssh-keyscan step here to pre-populate known_hosts (an earlier
+# version had one, targeting github.com on the default port 22 — which
+# this security group blocks, causing it to hang/fail silently and
+# abort the whole script under set -e). StrictHostKeyChecking
+# accept-new below already makes SSH trust and save a new host's key
+# automatically on first connection, so the pre-population step wasn't
+# actually needed even before it broke.
 cat > /root/.ssh/config <<EOF
 Host github.com
   Hostname ssh.github.com
