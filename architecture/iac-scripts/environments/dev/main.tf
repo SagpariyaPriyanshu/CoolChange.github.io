@@ -14,6 +14,11 @@ module "iam" {
 
   name_prefix = local.name_prefix
   common_tags = local.common_tags
+
+  # New in Phase 9 — scopes the OIDC trust policy (oidc.tf) to only
+  # accept workflow runs from this exact repo.
+  github_org  = local.github_org
+  github_repo = local.github_repo
 }
 
 module "database" {
@@ -43,8 +48,16 @@ module "compute" {
   instance_profile_name = module.iam.backend_instance_profile_name
   backend_role_name     = module.iam.backend_role_name
 
-  # instance_type, app_port, and admin_cidr_blocks all use the module's
-  # defaults — revisit app_port once the backend framework is settled.
+  # instance_type and admin_cidr_blocks use the module's defaults.
+  # app_port now defaults to the confirmed real value (3000) — see
+  # modules/compute/variables.tf.
+
+  # New in Phase 9 — everything the boot script (user_data.sh.tpl) needs
+  # to pull the backend code and wire it up to the database.
+  github_repo_ssh_url   = local.github_repo_ssh_url
+  deploy_key_secret_arn = module.secrets.secret_arns["github-deploy-key"]
+  db_secret_arn         = module.database.db_secret_arn
+  aws_region             = var.region
 }
 
 module "loadbalancer" {
@@ -92,11 +105,13 @@ module "secrets" {
   name_prefix = local.name_prefix
   common_tags = local.common_tags
 
-  # Add real secrets here as they come up, e.g.:
-  # app_secrets = {
-  #   "heat-data-api-key" = "the-actual-key-value"
-  # }
-  # Each entry becomes coolchange-dev/<name> in Secrets Manager,
-  # already readable by the backend thanks to Phase 2's IAM policy.
-  app_secrets = {}
+  # First real entry, added in Phase 9: the backend instance's GitHub
+  # SSH key, read from the gitignored terraform.tfvars value rather
+  # than hardcoded here. Becomes coolchange-dev/github-deploy-key in
+  # Secrets Manager — already readable by the backend thanks to Phase
+  # 2's IAM policy, and referenced by the compute module above via
+  # module.secrets.secret_arns["github-deploy-key"].
+  app_secrets = {
+    "github-deploy-key" = var.backend_deploy_key
+  }
 }

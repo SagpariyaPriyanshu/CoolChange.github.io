@@ -66,3 +66,16 @@ output "app_secret_arns" {
   description = "Map of app secret name to ARN, from the secrets module (empty until a real secret is added)"
   value       = module.secrets.secret_arns
 }
+
+# Phase 9 — the two CI role ARNs GitHub Actions authenticates as. Copy
+# these into the repo's Settings > Secrets and variables > Actions once
+# applied, for the workflow YAML files (section 5) to reference.
+output "github_actions_deploy_role_arn" {
+  description = "ARN of the narrow CI role — deploy workflows assume this"
+  value       = module.iam.github_actions_deploy_role_arn
+}
+
+output "github_actions_terraform_role_arn" {
+  description = "ARN of the broader CI role — the terraform plan/apply workflow assumes this"
+  value       = module.iam.github_actions_terraform_role_arn
+}
