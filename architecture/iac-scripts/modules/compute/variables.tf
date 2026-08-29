@@ -45,11 +45,37 @@ variable "instance_type" {
 variable "app_port" {
   description = "Port the backend application listens on"
   type        = number
-  default     = 8000
+  default     = 3000
+
+  # Was 8000 (a guess) through Phases 5-8. The real backend scaffold
+  # (Node/Express) defaults to 3000 — confirmed by inspecting the actual
+  # code in Phase 9, rather than guessing further.
 }
 
 variable "admin_cidr_blocks" {
   description = "CIDR ranges allowed to SSH in directly — empty by default, use SSM Session Manager instead"
   type        = list(string)
   default     = []
+}
+
+# New in Phase 9 — everything the user_data bootstrap script needs to
+# install Node, pull the backend code, and wire it up to the database.
+variable "github_repo_ssh_url" {
+  description = "SSH clone URL for the private backend repo, e.g. git@github.com:org/repo.git"
+  type        = string
+}
+
+variable "deploy_key_secret_arn" {
+  description = "Secrets Manager ARN holding the read-only GitHub deploy key, from the secrets module"
+  type        = string
+}
+
+variable "db_secret_arn" {
+  description = "Secrets Manager ARN holding the DB connection info, from the database module — the instance reads this at boot to build its DATABASE_URL"
+  type        = string
+}
+
+variable "aws_region" {
+  description = "Region to pass to the AWS CLI calls inside user_data (the instance's IAM role provides credentials, but the CLI still needs to be told which region)"
+  type        = string
 }
