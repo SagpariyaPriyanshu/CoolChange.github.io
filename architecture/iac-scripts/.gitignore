@@ -1,0 +1,26 @@
+# Terraform local state and caches — never committed, state lives in
+# the remote S3 backend (see bootstrap/ and environments/*/backend.tf)
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+
+# Local overrides / crash logs
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# May contain secrets — never commit actual values, use tfvars.example instead
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
+
+# Local CLI config
+.terraformrc
+terraform.rc
+
+# Keep the provider lock file committed so everyone resolves the same
+# provider versions
+!.terraform.lock.hcl
