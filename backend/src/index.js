@@ -3,6 +3,7 @@ const cors = require("cors");
 const config = require("./config");
 const healthRouter = require("./routes/health");
 const apiRouter = require("./routes/api");
+const deployTestRouter = require("./routes/deploy-test");
 
 const app = express();
 
@@ -10,6 +11,7 @@ app.use(cors());
 app.use(express.json());
 app.use("/health", healthRouter);
 app.use("/api", apiRouter);
+app.use("/deploy-test", deployTestRouter);
 
 if (require.main === module) {
   app.listen(config.port, () => {
