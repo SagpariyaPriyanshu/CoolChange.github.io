@@ -26,7 +26,7 @@ locals {
   # deploy from (used in the iam module's OIDC trust policy) and the
   # SSH clone URL the backend instance's boot script pulls from. One
   # place to change either if the repo is ever renamed or transferred.
-  github_org          = "SagpariyaPriyanshu"
+  github_org          = "xav08"
   github_repo         = "CoolChange.github.io"
   github_repo_ssh_url = "git@github.com:${local.github_org}/${local.github_repo}.git"
 
