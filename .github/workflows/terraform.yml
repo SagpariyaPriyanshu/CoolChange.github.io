@@ -29,6 +29,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # TEMPORARY DEBUG STEP — remove once the OIDC assume-role issue is
+      # solved. Fetches the exact same OIDC token configure-aws-credentials
+      # requests below and decodes its payload so we can see the real
+      # sub/aud/repository claims GitHub is actually issuing, instead of
+      # assuming what they are. Nothing sensitive is printed — these are
+      # the same non-secret claims (repo name, ref, workflow) that appear
+      # in any GitHub OIDC token.
+      - name: Debug OIDC token claims
+        run: |
+          TOKEN=$(curl -sSL "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=sts.amazonaws.com" \
+            -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" | jq -r '.value')
+          python3 -c "
+          import json, base64
+          payload = '$TOKEN'.split('.')[1]
+          padded = payload + '=' * (-len(payload) % 4)
+          print(json.dumps(json.loads(base64.urlsafe_b64decode(padded)), indent=2))
+          "
+
       - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: "1.9.0"
