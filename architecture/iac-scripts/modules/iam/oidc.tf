@@ -32,10 +32,38 @@ variable "github_repo" {
   type        = string
 }
 
+# Discovered in Phase 9, after the repo was transferred to a new owner:
+# GitHub doesn't always issue the sub claim as the plain
+# "repo:OWNER/REPO:..." string this trust policy originally assumed.
+# Around a rename or ownership transfer, it issues an ID-suffixed form
+# instead — "repo:OWNER@OWNER_ID/REPO@REPOSITORY_ID:..." — appending
+# each side's immutable numeric ID. This is deliberate on GitHub's part:
+# it stops a trust policy written for an old name from silently matching
+# a *different* repo that later reclaims that name. Confirmed live by
+# decoding this repo's actual OIDC token (see Architecture Decisions
+# Log). These IDs are permanent for this repo regardless of any future
+# rename, so hardcoding them here is safe — unlike the org/repo name
+# above, there's no "typo the wrong repo" risk, since a real ID doesn't
+# collide with anyone else's.
+variable "github_owner_id" {
+  description = "GitHub's immutable numeric ID for the repo owner (from the OIDC token's sub claim) — needed because GitHub issues an ID-suffixed sub format after an ownership transfer"
+  type        = string
+  default     = "56132067"
+}
+
+variable "github_repo_id" {
+  description = "GitHub's immutable numeric ID for the repo itself (from the OIDC token's sub claim) — see github_owner_id"
+  type        = string
+  default     = "1330385399"
+}
+
 # Trust policy shared by both CI roles: only workflow runs from this
 # exact repo (any branch/PR/tag — narrowing further isn't necessary,
 # since each role's own *permissions*, not its trust policy, are what
-# actually limit blast radius) are allowed to assume them.
+# actually limit blast radius) are allowed to assume them. Two patterns
+# are listed (StringLike accepts multiple values, OR'd together) so this
+# keeps working whether GitHub issues the plain sub format or the
+# ID-suffixed one — see the variables above for why both exist.
 data "aws_iam_policy_document" "github_actions_trust" {
   statement {
     effect  = "Allow"
@@ -55,7 +83,10 @@ data "aws_iam_policy_document" "github_actions_trust" {
     condition {
       test     = "StringLike"
       variable = "token.actions.githubusercontent.com:sub"
-      values   = ["repo:${var.github_org}/${var.github_repo}:*"]
+      values = [
+        "repo:${var.github_org}/${var.github_repo}:*",
+        "repo:${var.github_org}@${var.github_owner_id}/${var.github_repo}@${var.github_repo_id}:*",
+      ]
     }
   }
 }
