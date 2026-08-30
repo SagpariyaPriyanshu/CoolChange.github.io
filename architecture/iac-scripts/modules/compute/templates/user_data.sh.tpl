@@ -63,6 +63,18 @@ Host github.com
 EOF
 chmod 600 /root/.ssh/config
 
+# --- Give the coolchange user its own copy of the same SSH access. CI's
+# redeploy step (deploybackend.yml) runs git fetch as this user, not root,
+# via SSM Run Command — without this, that fetch falls back to default
+# SSH on port 22 straight to github.com, which the security group blocks
+# outbound, and hangs until it times out instead of failing fast.
+mkdir -p /opt/coolchange/.ssh
+cp /root/.ssh/coolchange_deploy_key /opt/coolchange/.ssh/coolchange_deploy_key
+cp /root/.ssh/config /opt/coolchange/.ssh/config
+chown -R coolchange:coolchange /opt/coolchange/.ssh
+chmod 700 /opt/coolchange/.ssh
+chmod 600 /opt/coolchange/.ssh/coolchange_deploy_key /opt/coolchange/.ssh/config
+
 # --- Clone (or update) the backend repo, development branch only ---
 if [ ! -d "$${APP_DIR}/.git" ]; then
   git clone --branch development --single-branch "${repo_ssh_url}" "$${APP_DIR}"

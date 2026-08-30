@@ -34,6 +34,7 @@ jobs:
       - name: Trigger deploy via SSM
         run: |
           SCRIPT=$(cat <<'EOF'
+          set -euo pipefail
           sudo -u coolchange -H bash -c '
             set -euo pipefail
             cd /opt/coolchange/app
