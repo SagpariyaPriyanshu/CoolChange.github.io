@@ -70,11 +70,16 @@ jobs:
           # the instant the command was *submitted*, not once the deploy
           # actually finished (or failed).
           for i in $(seq 1 30); do
-            INVOCATION=$(aws ssm get-command-invocation \
+            # The assignment itself must be the if's condition (negated) —
+            # this workflow's shell runs with `bash -e`, and a failing
+            # command inside `VAR=$(...)` on its own line still aborts the
+            # whole script under -e even if the very next line checks $?;
+            # only testing the assignment directly (or `... || true`)
+            # actually suppresses that.
+            if ! INVOCATION=$(aws ssm get-command-invocation \
               --command-id "$COMMAND_ID" \
               --instance-id "${{ vars.BACKEND_INSTANCE_ID }}" \
-              --output json 2>&1)
-            if [ $? -ne 0 ]; then
+              --output json 2>&1); then
               # A real API error (throttling, not-yet-registered invocation,
               # etc) — log it instead of silently calling it Pending, so a
               # genuine problem here is visible rather than looking like a
