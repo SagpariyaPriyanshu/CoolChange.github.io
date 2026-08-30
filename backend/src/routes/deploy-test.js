@@ -6,7 +6,7 @@ const router = express.Router();
 // (deploybackend.yml) — confirms a push to development actually reaches
 // the running instance. Safe to remove once the workflow's been proven
 // working, or to leave in as a lightweight "what's currently deployed"
-// check if it turns out useful.
+// check if it turns out useful. Temporary endpoint added purely to verify the CI/CD pipeline
 router.get("/", (req, res) => {
   res.json({
     message: "CI/CD deploy test endpoint",
