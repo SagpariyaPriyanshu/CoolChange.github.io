@@ -34,7 +34,13 @@ jobs:
       - name: Trigger deploy via SSM
         run: |
           SCRIPT=$(cat <<'EOF'
-          set -euo pipefail
+          # -eu only, not -euo pipefail — AWS-RunShellScript executes this
+          # top-level script with /bin/sh (dash on this AMI), and dash
+          # doesn't support the pipefail option (that's a bashism). No
+          # pipes at this outer level need it anyway; the inner block
+          # below explicitly invokes bash, so its own set -euo pipefail
+          # works fine.
+          set -eu
           sudo -u coolchange -H bash -c '
             set -euo pipefail
             cd /opt/coolchange/app

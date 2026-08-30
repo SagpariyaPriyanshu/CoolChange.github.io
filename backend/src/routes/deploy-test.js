@@ -7,7 +7,6 @@ const router = express.Router();
 // the running instance. Safe to remove once the workflow's been proven
 // working, or to leave in as a lightweight "what's currently deployed"
 // check if it turns out useful. 
-// simple deployment test 2
 router.get("/", (req, res) => {
   res.json({
     message: "CI/CD deploy test endpoint",
