@@ -1,5 +1,5 @@
 -- =============================================================================
--- queries.sql -- reference SQL for each API endpoint in API_CONTRACT.md.
+-- queries.sql -- reference SQL for each API endpoint in the API contract.
 --
 -- These are NOT run by the app. They are the verified query for each endpoint,
 -- so the backend has a known-correct starting point. Every one of them has been
@@ -100,7 +100,7 @@ SELECT area_type, area_code, area_name, scope, n_blocks,
 
 -- GET /api/v1/search?q= ------------------------------------------------------
 -- Suburb search only. There is NO postcode field in any source dataset --
--- see the open issue in API_CONTRACT.md before wiring US1.2.1.
+-- see the open issue in the API contract before wiring US1.2.1.
 -- The LOWER(sa2_name) index makes this a prefix scan.
 SELECT sa2_code16, sa2_name, min(lga_name) AS lga_name, count(*) AS n_blocks
   FROM mesh_block

@@ -77,8 +77,9 @@ CREATE TABLE mesh_block (
 COMMENT ON TABLE  mesh_block IS
     'One row per ABS 2016 mesh block in metropolitan Melbourne. 54,239 rows. '
     'The published study analysed 55,603; the extra blocks are mostly parkland '
-    'and water that the public service does not publish. See '
-    'BLOCK_COUNT_DISCREPANCY.md. Never cite 55,603 as our n.';
+    'and water that the public service does not publish. See the '
+    'block-count investigation in the team documentation. Never cite 55,603 '
+    'as our n.';
 
 COMMENT ON COLUMN mesh_block.uhi_mean IS
     'Mean summer land surface temperature DEVIATION in degrees C from the '
@@ -352,7 +353,7 @@ INSERT INTO app_config (key, value, description) VALUES
      'Newest metro-wide vintage available. DEECA has announced an update with '
      'no delivery date.'),
     ('n_blocks',         '54239',
-     'Our n. Never cite 55,603 -- see BLOCK_COUNT_DISCREPANCY.md.');
+     'Our n. Never cite 55,603 -- see the block-count investigation.');
 
 
 -- -----------------------------------------------------------------------------

@@ -11,3 +11,8 @@ dist/
 data-pipeline/.cache/
 __pycache__/
 *.pyc
+
+# Front-end data bundle: 24 MB of derived data that
+# data-pipeline/04_build_frontend_bundle.py regenerates from the seed files in
+# one command. Delivered to the front end as a bundle, not through Git.
+frontend/public/data/

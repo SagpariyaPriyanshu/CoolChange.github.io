@@ -88,10 +88,15 @@ load aborts instead of half-applying.
 
 ## Documents
 
-| Doc | What |
+The written documents — the block-count investigation, the data processing
+plan, the API contract, the E8 data limitations — are **not in this repository**.
+They are kept with the team's shared documentation and go to the unit staff from
+there. Ask Yu for the current copies.
+
+What *is* in the repo:
+
+| Path | What |
 |---|---|
-| `../docs/BLOCK_COUNT_DISCREPANCY.md` | why 54,239 and not 55,603 |
-| `../docs/DATA_PROCESSING_PLAN.md` | the join approach, decisions, provenance |
-| `../docs/API_CONTRACT.md` | response shapes for FE and BE |
 | `../backend/src/db/migrations/002_create_schema.sql` | the schema, heavily commented |
 | `../backend/src/db/queries.sql` | verified SQL behind each endpoint |
+| `../api/` | the read-only API over that schema |
