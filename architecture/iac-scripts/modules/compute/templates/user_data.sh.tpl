@@ -68,9 +68,23 @@ chmod 600 /root/.ssh/config
 # via SSM Run Command — without this, that fetch falls back to default
 # SSH on port 22 straight to github.com, which the security group blocks
 # outbound, and hangs until it times out instead of failing fast.
+#
+# This is its own key file + config, not a copy of root's — root's own
+# files live under /root, which the unprivileged coolchange user can't
+# read regardless of what IdentityFile path a config points at, so the
+# config below has to reference this directory's own copy of the key.
 mkdir -p /opt/coolchange/.ssh
 cp /root/.ssh/coolchange_deploy_key /opt/coolchange/.ssh/coolchange_deploy_key
-cp /root/.ssh/config /opt/coolchange/.ssh/config
+
+cat > /opt/coolchange/.ssh/config <<EOF
+Host github.com
+  Hostname ssh.github.com
+  Port 443
+  IdentityFile /opt/coolchange/.ssh/coolchange_deploy_key
+  IdentitiesOnly yes
+  StrictHostKeyChecking accept-new
+EOF
+
 chown -R coolchange:coolchange /opt/coolchange/.ssh
 chmod 700 /opt/coolchange/.ssh
 chmod 600 /opt/coolchange/.ssh/coolchange_deploy_key /opt/coolchange/.ssh/config
