@@ -14,21 +14,6 @@ export default function App() {
     <>
       <Header />
       <main>
-        {/* Temporary — verifies the CI/CD pipeline (deployfrontend.yml)
-            actually reaches the live site. Safe to remove once the
-            workflow's been proven working. */}
-        <div
-          style={{
-            background: "#fef3c7",
-            color: "#78350f",
-            textAlign: "center",
-            padding: "0.75rem 1rem",
-            fontSize: "0.9rem",
-            fontWeight: 600,
-          }}
-        >
-          Testing deployment pipeline
-        </div>
         <Hero />
         <LeadCopy />
         <StorySteps activeStep={activeStoryStep} />
