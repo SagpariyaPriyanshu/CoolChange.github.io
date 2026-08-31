@@ -40,19 +40,19 @@ export const mapLayers: Record<StoryLayer, { label: string; low: string; high: s
     label: "2026 heat",
     low: "cooler",
     high: "hotter",
-    note: "High heat residential mesh blocks highlighted. Low heat blocks intentionally suppressed.",
+    note: "",
   },
   canopy: {
     label: "Canopy",
     low: "sparse",
     high: "denser",
-    note: "Park and reserve canopy highlighted · colour treatment illustrative",
+    note: "",
   },
   future: {
     label: "2050 heat",
     low: "2026",
     high: "2050",
-    note: "High density heat pattern intensifies. Illustrative future scenario, not a forecast.",
+    note: "The same local density pattern is intensified for the illustrative 2050 view.",
   },
 };
 
