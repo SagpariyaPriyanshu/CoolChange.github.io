@@ -11,7 +11,7 @@ const config = require("../config");
 const seedsDir = path.join(__dirname, "seeds");
 const result = spawnSync(
   "psql",
-  [config.databaseUrl, "-v", "ON_ERROR_STOP=1", "-f", "load_seeds.sql"],
+  ["-v", "ON_ERROR_STOP=1", "-f", "load_seeds.sql", config.databaseUrl],
   { cwd: seedsDir, stdio: "inherit" }
 );
 
