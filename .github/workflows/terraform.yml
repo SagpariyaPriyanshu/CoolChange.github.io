@@ -1,0 +1,108 @@
+name: Terraform Plan & Apply
+
+# Only runs when something under architecture/iac-scripts actually
+# changes, and only on pushes to development — matches how the backend
+# instance's own deploy is scoped (see user_data.sh.tpl). workflow_dispatch
+# lets you trigger it by hand from the Actions tab too, e.g. to re-run
+# apply without a new commit.
+on:
+  push:
+    branches: [development]
+    paths:
+      - "architecture/iac-scripts/**"
+  workflow_dispatch: {}
+
+# Required for OIDC: without id-token: write, the job can't request a
+# token from GitHub's OIDC provider at all, and configure-aws-credentials
+# below has nothing to exchange with AWS.
+permissions:
+  id-token: write
+  contents: read
+
+defaults:
+  run:
+    working-directory: architecture/iac-scripts/environments/dev
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.0"
+
+      # Exchanges this run's OIDC token for temporary AWS credentials,
+      # scoped to whatever github_actions_terraform_role_arn allows (see
+      # modules/iam/ci_terraform_policy.tf). vars.TERRAFORM_ROLE_ARN is a
+      # plain repo variable (Settings > Secrets and variables > Actions >
+      # Variables) — not a secret, since a role ARN alone can't be used
+      # to authenticate as anything; the role's own trust policy is what
+      # actually restricts who can assume it.
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.TERRAFORM_ROLE_ARN }}
+          aws-region: ap-southeast-4
+
+      - run: terraform init
+
+      # backend_deploy_key has no default (environments/dev/variables.tf)
+      # and is never committed — locally it comes from a gitignored
+      # terraform.tfvars, but that file doesn't exist in a fresh CI
+      # checkout. Terraform automatically maps a TF_VAR_<name>
+      # environment variable onto a matching variable, so this reads the
+      # same key content from a GitHub Actions secret instead. Add it at
+      # Settings > Secrets and variables > Actions > Secrets, name
+      # BACKEND_DEPLOY_KEY, value = the exact contents of your local
+      # coolchange_temp_key file (GitHub secrets support multi-line
+      # values, so no extra escaping needed).
+      - run: terraform plan -out=tfplan
+        env:
+          TF_VAR_backend_deploy_key: ${{ secrets.BACKEND_DEPLOY_KEY }}
+
+      # Passed to the apply job below. Note this binary plan file does
+      # contain the real (unmasked) values of sensitive resources like
+      # the deploy key secret's content, even though Terraform's own
+      # console/log output masks them — it's only ever stored as a
+      # short-lived GitHub Actions artifact (auto-deleted after 1 day
+      # here, never committed to the repo), not left lying around.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tfplan
+          path: architecture/iac-scripts/environments/dev/tfplan
+          retention-days: 1
+
+  apply:
+    needs: plan
+    runs-on: ubuntu-latest
+    # This environment is what makes apply wait for manual approval.
+    # One-time setup on GitHub: Settings > Environments > New environment,
+    # name it exactly "terraform-apply", then add yourself (and anyone
+    # else who should be able to approve) under "Required reviewers".
+    # Once that's set, this job pauses after plan succeeds and shows up
+    # under the Actions run waiting for someone to click Approve.
+    environment: terraform-apply
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.0"
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.TERRAFORM_ROLE_ARN }}
+          aws-region: ap-southeast-4
+
+      - run: terraform init
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: tfplan
+          path: architecture/iac-scripts/environments/dev
+
+      # Applies the exact plan that was reviewed — not a fresh plan — so
+      # what gets approved is guaranteed to be what gets applied, with no
+      # window for the two to drift apart.
+      - run: terraform apply tfplan
