@@ -103,7 +103,42 @@ SELECT RTRIM(sa2_code16) AS sa2_code16, sa2_name, min(lga_name) AS lga_name, cou
  WHERE LOWER(sa2_name) LIKE LOWER($1) || '%'
  GROUP BY sa2_code16, sa2_name
  ORDER BY sa2_name
- LIMIT 10
+LIMIT 10
+`;
+
+const mapSuburbs = `
+-- name: mapSuburbs
+SELECT RTRIM(m.sa2_code16) AS sa2_code16,
+       m.sa2_name,
+       MIN(m.lga_name) AS lga_name,
+       COUNT(*)::integer AS n_blocks,
+       ROUND(AVG(m.uhi_mean)::numeric, 2) AS uhi_mean,
+       ROUND(AVG(m.canopy_pct)::numeric, 2) AS canopy_mean,
+       ST_AsGeoJSON(s.geom, 6) AS geometry
+  FROM mesh_block m
+  JOIN map_suburb_geometry s ON s.sa2_code16 = m.sa2_code16
+ GROUP BY m.sa2_code16, m.sa2_name, s.geom
+ ORDER BY m.sa2_name
+`;
+
+const mapMeshblocksBySuburb = `
+-- name: mapMeshblocksBySuburb
+SELECT RTRIM(m.mb_code16) AS mb_code16,
+       RTRIM(m.sa2_code16) AS sa2_code16,
+       m.sa2_name,
+       m.lga_name,
+       m.uhi_mean,
+       m.canopy_pct,
+       m.mb_category,
+       m.persons,
+       ST_AsGeoJSON(
+         ST_SimplifyPreserveTopology(g.geom, 0.00001),
+         6
+       ) AS geometry
+  FROM mesh_block m
+  JOIN mesh_block_geometry g USING (mb_code16)
+ WHERE m.sa2_code16 = $1
+ ORDER BY m.mb_code16
 `;
 
 module.exports = {
@@ -118,4 +153,6 @@ module.exports = {
   blockProjections,
   areaByKey,
   searchSuburbs,
+  mapSuburbs,
+  mapMeshblocksBySuburb,
 };

@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 
-type Page = "story" | "about";
+type Page = "story" | "map" | "about";
 
 function pageFromHash(): Page {
-  return window.location.hash === "#about" ? "about" : "story";
+  if (window.location.hash === "#about") return "about";
+  if (window.location.hash === "#map") return "map";
+  return "story";
 }
 
 export function useCurrentPage() {

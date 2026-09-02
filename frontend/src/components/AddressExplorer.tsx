@@ -5,6 +5,8 @@ export function AddressExplorer() {
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (query.trim()) sessionStorage.setItem("coolchange-suburb-query", query.trim());
+    window.location.hash = "map";
   }
 
   return (

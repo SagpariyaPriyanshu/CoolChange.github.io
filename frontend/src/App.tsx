@@ -1,6 +1,7 @@
 import { AboutPage } from "./components/AboutPage";
 import { Header } from "./components/Header";
 import { StoryPage } from "./components/StoryPage";
+import { MelbourneMapPage } from "./components/MelbourneMapPage";
 import { useCurrentPage } from "./hooks/useCurrentPage";
 
 export default function App() {
@@ -9,7 +10,7 @@ export default function App() {
   return (
     <>
       <Header />
-      {page === "about" ? <AboutPage /> : <StoryPage />}
+      {page === "about" ? <AboutPage /> : page === "map" ? <MelbourneMapPage /> : <StoryPage />}
     </>
   );
 }

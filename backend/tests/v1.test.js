@@ -199,6 +199,39 @@ describe("GET /api/v1/search", () => {
   });
 });
 
+describe("map geometry endpoints", () => {
+  it("returns suburb overview GeoJSON with summary properties", async () => {
+    pool.query.mockResolvedValue(rows([{
+      sa2_code16: "206011105",
+      sa2_name: "Brunswick",
+      lga_name: "Moreland (C)",
+      n_blocks: 363,
+      uhi_mean: 4.28,
+      canopy_mean: 17.32,
+      geometry: JSON.stringify({
+        type: "MultiPolygon",
+        coordinates: [[[[144.9, -37.8], [145, -37.8], [144.9, -37.8]]]],
+      }),
+    }]));
+
+    const response = await request(app).get("/api/v1/map/suburbs");
+    expect(response.status).toBe(200);
+    expect(response.body.type).toBe("FeatureCollection");
+    expect(response.body.features[0].properties).toEqual(expect.objectContaining({
+      sa2_name: "Brunswick",
+      n_blocks: 363,
+      uhi_mean: 4.28,
+    }));
+  });
+
+  it("rejects malformed suburb codes before querying geometry", async () => {
+    const response = await request(app).get("/api/v1/map/suburbs/not-a-code/meshblocks");
+    expect(response.status).toBe(400);
+    expect(response.body.error.code).toBe("BAD_REQUEST");
+    expect(pool.query).not.toHaveBeenCalled();
+  });
+});
+
 describe("GET /api/v1/areas/:type/:code", () => {
   it("returns NOT_FOUND when the area is missing", async () => {
     pool.query.mockResolvedValue(rows([]));

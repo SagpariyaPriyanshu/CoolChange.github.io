@@ -7,10 +7,10 @@ import {
   clydeNorthFade,
   loadPopulationDensityPoints,
 } from "../utils/mapOverlayData";
+import { resolveMapStyle } from "../utils/mapStyle";
 
 const HEAT_SOURCE = "coolchange-heat-source";
 const CANOPY_SOURCE = "coolchange-canopy-source";
-const GREY_MAP_STYLE = "mapbox://styles/mapbox/light-v11";
 const HEAT_LAYER = "coolchange-heat";
 const PARK_LAYER = "coolchange-parks";
 const RESERVE_LAYER = "coolchange-national-reserves";
@@ -108,21 +108,21 @@ export function MapboxBaseMap({ label, layer, cooling }: MapboxBaseMapProps) {
   const [hasLoaded, setHasLoaded] = useState(false);
   const [layersReady, setLayersReady] = useState(false);
   const accessToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
-  const mapStyle = GREY_MAP_STYLE;
 
   currentLayerRef.current = layer;
   coolingRef.current = cooling;
 
   useEffect(() => {
     const container = containerRef.current;
-    if (!container || !accessToken) return undefined;
+    const mapConfig = resolveMapStyle(accessToken);
+    if (!container || !mapConfig.accessToken) return undefined;
 
     let cancelled = false;
 
     const map = new mapboxgl.Map({
       container,
-      accessToken,
-      style: mapStyle,
+      accessToken: mapConfig.accessToken,
+      style: mapConfig.style,
       center: CLYDE_NORTH,
       zoom: 13.5,
       bearing: 0,
@@ -261,7 +261,7 @@ export function MapboxBaseMap({ label, layer, cooling }: MapboxBaseMapProps) {
       mapRef.current = null;
       map.remove();
     };
-  }, [accessToken, mapStyle]);
+  }, [accessToken]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -269,8 +269,8 @@ export function MapboxBaseMap({ label, layer, cooling }: MapboxBaseMapProps) {
     updateMapLayers(map, layer, cooling, clydeNorthFade(map));
   }, [cooling, layer, layersReady]);
 
-  if (!accessToken) {
-    return <div className="map-config-message">Add your Mapbox access token to <code>.env.local</code> to load this map.</div>;
+  if (!resolveMapStyle(accessToken).accessToken) {
+    return <div className="map-config-message">Add a public Mapbox token (<code>pk.*</code>) to <code>frontend/.env.local</code>.</div>;
   }
 
   return (

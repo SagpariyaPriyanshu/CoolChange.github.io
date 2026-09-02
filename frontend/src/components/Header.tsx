@@ -11,7 +11,7 @@ export function Header() {
         </a>
         <nav aria-label="Main navigation">
           <a href="#story">The story</a>
-          <a className="nav-cta" href="#explore">Explore your area <span aria-hidden="true">↗</span></a>
+          <a className="nav-cta" href="#map">Explore the map <span aria-hidden="true">↗</span></a>
           <a className="nav-about" href="#about">About</a>
         </nav>
       </div>
