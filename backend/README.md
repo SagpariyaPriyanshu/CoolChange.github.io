@@ -1,8 +1,8 @@
 # CoolChange backend
 
-Story 0.3 scaffold on the `backend` branch: folder layout, a local PostGIS database, and a local API server. Domain tables and read-only heat-map endpoints are not in this commit — they wait until Yu and Yipu lock the schema.
+Story 0.3 read-only API on the `backend` branch. Schema, seed CSVs and reference SQL come from Yu (`data-analysis`); this branch owns the HTTP contract.
 
-Team: FOXES EAT IT. Stack matches the onboarding project: **Node.js 20 + Express + PostgreSQL/PostGIS**.
+Team: FOXES EAT IT. Stack: **Node.js 20 + Express + PostgreSQL/PostGIS**. Listen on **port 3000**. ALB health check is **`GET /health`**.
 
 ---
 
@@ -15,7 +15,8 @@ nvm use          # Node 20 (.nvmrc)
 npm install
 cp .env.example .env
 npm run db:up    # start local PostGIS (Docker)
-npm run migrate  # enable PostGIS
+npm run migrate  # PostGIS + domain tables
+npm run seed     # load Yu's mesh-block CSVs (needs psql)
 npm run dev      # http://localhost:3000
 ```
 
@@ -23,9 +24,10 @@ Checks:
 
 | URL | What it tells you |
 |-----|-------------------|
-| http://localhost:3000/health | process is up |
+| http://localhost:3000/health | process is up (ALB uses this path) |
 | http://localhost:3000/health/db | Postgres is reachable and PostGIS is installed |
-| http://localhost:3000/api | placeholder for the future read-only API |
+| http://localhost:3000/api/v1 | lists read-only endpoints |
+| http://localhost:3000/api/v1/bootstrap | colour scale, model, metro projection bands |
 
 Production-style start (no reload): `npm start`.
 
@@ -108,15 +110,20 @@ CoolChange/
     │   ├── index.js          # Express entry: CORS, routes, listen
     │   ├── config/index.js   # PORT, DATABASE_URL, DATABASE_SSL
     │   ├── db/
-    │   │   ├── pool.js       # shared pg pool
-    │   │   ├── migrate.js    # applies migrations/*.sql in order
-    │   │   ├── migrations/   # 001_enable_postgis.sql (domain SQL later)
-    │   │   └── seeds/        # empty until Yu hands off joined data
+    │   │   ├── pool.js
+    │   │   ├── migrate.js
+    │   │   ├── seed.js
+    │   │   ├── sql.js             # named queries (from Yu's queries.sql)
+    │   │   ├── queries.sql        # reference SQL, not executed by Node
+    │   │   ├── migrations/        # 001 PostGIS, 002 domain schema
+    │   │   └── seeds/             # Yu's CSVs + load_seeds.sql
     │   ├── routes/
-    │   │   ├── health.js     # GET /health and GET /health/db
-    │   │   └── api.js        # GET /api placeholder
-    │   └── services/         # query helpers once endpoints exist
-    └── tests/                # Jest + supertest
+    │   │   ├── health.js
+    │   │   ├── api.js             # GET /api index
+    │   │   └── v1.js              # /api/v1/* read-only API
+    │   ├── services/              # row → JSON contract
+    │   └── http/errors.js
+    └── tests/
 ```
 
 Git: `main` → `development` → `backend`. Keep backend work on this branch until it merges into `development`.
@@ -131,6 +138,7 @@ Git: `main` → `development` → `backend`. Keep backend work on this branch un
 | `npm run db:down` | Stop local PostGIS (volume kept) |
 | `npm run db:logs` | Follow database logs |
 | `npm run migrate` | Apply pending SQL migrations |
+| `npm run seed` | Load mesh-block CSVs via psql |
 | `npm run dev` | API with reload |
 | `npm start` | API without reload |
 | `npm test` | Jest |

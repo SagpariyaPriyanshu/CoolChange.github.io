@@ -86,6 +86,10 @@ $$;
 
 COMMIT;
 
+-- Empty until the first refresh: the view is created at migrate time
+-- when mesh_block has no rows yet.
+REFRESH MATERIALIZED VIEW equity_by_decile;
+
 \echo ''
 \echo 'Loaded. Summary:'
 SELECT 'mesh_block'            AS table_name, count(*) AS rows FROM mesh_block

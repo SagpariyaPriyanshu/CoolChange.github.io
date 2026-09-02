@@ -367,17 +367,26 @@ INSERT INTO app_config (key, value, description) VALUES
 -- contains this lat/lng" for map clicks and address search. That is the one
 -- thing PostGIS earns its place for. Populate it only if we build that
 -- endpoint; leaving it empty costs nothing.
+--
+-- Created only when PostGIS is installed (Docker Compose image). Homebrew
+-- Postgres without the extension still gets the rest of the domain schema.
 -- -----------------------------------------------------------------------------
-CREATE TABLE mesh_block_geometry (
-    mb_code16 CHAR(11) PRIMARY KEY REFERENCES mesh_block (mb_code16) ON DELETE CASCADE,
-    geom      GEOMETRY(MULTIPOLYGON, 4326) NOT NULL
-);
-
-CREATE INDEX ix_mesh_block_geometry_gist ON mesh_block_geometry USING GIST (geom);
-
-COMMENT ON TABLE mesh_block_geometry IS
-    'Optional. Server-side point-in-polygon lookups only. Geometry for '
-    'rendering is served as a static asset, never through the API.';
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'postgis') THEN
+    CREATE TABLE mesh_block_geometry (
+      mb_code16 CHAR(11) PRIMARY KEY REFERENCES mesh_block (mb_code16) ON DELETE CASCADE,
+      geom      GEOMETRY(MULTIPOLYGON, 4326) NOT NULL
+    );
+    CREATE INDEX ix_mesh_block_geometry_gist ON mesh_block_geometry USING GIST (geom);
+    COMMENT ON TABLE mesh_block_geometry IS
+      'Optional. Server-side point-in-polygon lookups only. Geometry for '
+      'rendering is served as a static asset, never through the API.';
+  ELSE
+    RAISE NOTICE 'PostGIS not installed; skip mesh_block_geometry. Choropleth API still works.';
+  END IF;
+END
+$$;
 
 
 -- -----------------------------------------------------------------------------

@@ -12,10 +12,11 @@ describe("GET /health", () => {
 });
 
 describe("GET /api", () => {
-  it("returns the scaffold placeholder", async () => {
+  it("points at the v1 read-only API", async () => {
     const response = await request(app).get("/api");
 
     expect(response.status).toBe(200);
-    expect(response.body.status).toBe("scaffold");
+    expect(response.body.version).toBe("v1");
+    expect(response.body.endpoints[0]).toMatch(/^GET \/api\/v1\//);
   });
 });
