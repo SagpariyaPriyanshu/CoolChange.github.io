@@ -15,6 +15,8 @@ router.get(
         "GET /api/v1/meshblocks/:mb_code16",
         "GET /api/v1/areas/:area_type/:area_code",
         "GET /api/v1/search?q=",
+        "GET /api/v1/map/suburbs",
+        "GET /api/v1/map/suburbs/:sa2_code16/meshblocks",
       ],
     });
   }
@@ -59,6 +61,22 @@ router.get(
   "/search",
   asyncHandler(async (req, res) => {
     res.json(await readApi.searchSuburbs(req.query.q));
+  })
+);
+
+router.get(
+  "/map/suburbs",
+  asyncHandler(async (req, res) => {
+    res.set("Cache-Control", "public, max-age=3600");
+    res.json(await readApi.getMapSuburbs());
+  })
+);
+
+router.get(
+  "/map/suburbs/:sa2_code16/meshblocks",
+  asyncHandler(async (req, res) => {
+    res.set("Cache-Control", "public, max-age=3600");
+    res.json(await readApi.getMapMeshblocks(req.params.sa2_code16));
   })
 );
 

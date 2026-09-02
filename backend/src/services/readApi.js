@@ -15,15 +15,18 @@ const {
   shapeCoolest,
   shapeProjection,
   shapeArea,
+  round2,
 } = require("./shape");
 
 const AREA_TYPES = new Set(["METRO", "LGA", "SA3", "SA2"]);
 const SCOPES = new Set(["ALL", "RESIDENTIAL"]);
 
 let bootstrapCache = null;
+let mapSuburbsCache = null;
 
 function resetBootstrapCache() {
   bootstrapCache = null;
+  mapSuburbsCache = null;
 }
 
 async function query(text, params) {
@@ -148,6 +151,74 @@ async function searchSuburbs(rawQuery) {
   };
 }
 
+function geometryFeature(row, properties) {
+  return {
+    type: "Feature",
+    geometry: JSON.parse(row.geometry),
+    properties,
+  };
+}
+
+async function getMapSuburbs() {
+  if (mapSuburbsCache) return mapSuburbsCache;
+
+  const result = await query(sql.mapSuburbs);
+  if (!result.rows.length) {
+    throw new ApiError(
+      503,
+      "GEOMETRY_UNAVAILABLE",
+      "Mesh-block geometry has not been loaded. Run npm run geometry:load."
+    );
+  }
+
+  mapSuburbsCache = {
+    type: "FeatureCollection",
+    features: result.rows.map((row) =>
+      geometryFeature(row, {
+        sa2_code16: String(row.sa2_code16).trim(),
+        sa2_name: row.sa2_name,
+        lga_name: row.lga_name,
+        n_blocks: Number(row.n_blocks),
+        uhi_mean: round2(row.uhi_mean),
+        canopy_mean: round2(row.canopy_mean),
+      })
+    ),
+  };
+  return mapSuburbsCache;
+}
+
+async function getMapMeshblocks(rawSa2Code) {
+  const sa2Code = String(rawSa2Code || "").trim();
+  if (!/^\d{9}$/.test(sa2Code)) {
+    throw badRequest("sa2_code16 must be a 9-digit ABS SA2 code.");
+  }
+
+  const result = await query(sql.mapMeshblocksBySuburb, [sa2Code]);
+  if (!result.rows.length) {
+    throw notFound(`No mapped mesh blocks were found for SA2 ${sa2Code}.`);
+  }
+
+  const first = result.rows[0];
+  return {
+    type: "FeatureCollection",
+    suburb: {
+      sa2_code16: String(first.sa2_code16).trim(),
+      sa2_name: first.sa2_name,
+      lga_name: first.lga_name,
+      n_blocks: result.rows.length,
+    },
+    features: result.rows.map((row) =>
+      geometryFeature(row, {
+        mb_code16: String(row.mb_code16).trim(),
+        uhi_mean: round2(row.uhi_mean),
+        canopy_pct: round2(row.canopy_pct),
+        mb_category: row.mb_category,
+        persons: row.persons == null ? null : Number(row.persons),
+      })
+    ),
+  };
+}
+
 module.exports = {
   getBootstrap,
   resetBootstrapCache,
@@ -155,4 +226,6 @@ module.exports = {
   getMeshblock,
   getArea,
   searchSuburbs,
+  getMapSuburbs,
+  getMapMeshblocks,
 };
