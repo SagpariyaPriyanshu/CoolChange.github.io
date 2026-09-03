@@ -3,6 +3,7 @@ import mapboxgl, { type GeoJSONSource, type MapMouseEvent } from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { resolveMapStyle } from "../utils/mapStyle";
 
+// resolve the backend endpoint for map data
 const API_BASE = (import.meta.env.VITE_API_BASE_URL || "/api/v1").replace(/\/$/, "");
 const MELBOURNE_CENTER: [number, number] = [144.9631, -37.8136];
 type SourceData = Parameters<GeoJSONSource["setData"]>[0];
@@ -52,12 +53,14 @@ type MeshblockDetail = {
   };
 };
 
+// derive bounds from nested geojson coordinates
 function boundsFor(data: MapFeatureCollection): [[number, number], [number, number]] | null {
   let west = Number.POSITIVE_INFINITY;
   let south = Number.POSITIVE_INFINITY;
   let east = Number.NEGATIVE_INFINITY;
   let north = Number.NEGATIVE_INFINITY;
 
+  // inspect each coordinate level in the geometry
   function visit(value: unknown) {
     if (!Array.isArray(value)) return;
     if (
@@ -83,20 +86,24 @@ function boundsFor(data: MapFeatureCollection): [[number, number], [number, numb
 
 type MapProperties = Record<string, string | number | boolean | null | undefined>;
 
+// read properties from the top rendered feature
 function eventProperties(event: MapMouseEvent): MapProperties | undefined {
   return (event.features?.[0] as { properties?: MapProperties } | undefined)?.properties;
 }
 
+// safely read a text value from map properties
 function propertyText(properties: MapProperties | undefined, key: string) {
   const value = properties?.[key];
   return value == null ? "" : String(value);
 }
 
+// safely read a numeric value from map properties
 function propertyNumber(properties: MapProperties | undefined, key: string) {
   const value = Number(properties?.[key]);
   return Number.isFinite(value) ? value : 0;
 }
 
+// render the suburb and mesh-block explorer
 export function MelbourneMapPage() {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
@@ -109,6 +116,7 @@ export function MelbourneMapPage() {
   const [blockLoading, setBlockLoading] = useState(false);
   const accessToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
 
+  // load and display mesh blocks for one suburb
   const openSuburb = useCallback(async (selection: SearchResult | SuburbSummary) => {
     const map = mapRef.current;
     if (!map) return;
@@ -117,6 +125,7 @@ export function MelbourneMapPage() {
     setSelectedBlock(null);
     setMapError("");
     try {
+      // load mesh blocks only after a suburb is selected
       const response = await fetch(
         `${API_BASE}/map/suburbs/${encodeURIComponent(selection.sa2_code16)}/meshblocks`,
       );
@@ -125,6 +134,7 @@ export function MelbourneMapPage() {
       const source = map.getSource(MESH_SOURCE) as GeoJSONSource | undefined;
       source?.setData(data as SourceData);
       setSuburb({ ...selection, ...data.suburb });
+      // replace suburb outlines with mesh-block layers
       map.setLayoutProperty(SUBURB_FILL, "visibility", "none");
       map.setLayoutProperty(SUBURB_LINE, "visibility", "none");
       map.setLayoutProperty(MESH_FILL, "visibility", "visible");
@@ -139,6 +149,7 @@ export function MelbourneMapPage() {
     }
   }, []);
 
+  // load the details for one selected mesh block
   const openBlock = useCallback(async (mbCode16: string) => {
     const map = mapRef.current;
     if (!map) return;
@@ -155,6 +166,7 @@ export function MelbourneMapPage() {
     }
   }, []);
 
+  // create the melbourne map and suburb layers
   useEffect(() => {
     const container = containerRef.current;
     const mapConfig = resolveMapStyle(accessToken);
@@ -176,6 +188,7 @@ export function MelbourneMapPage() {
     map.addControl(new mapboxgl.ScaleControl({ unit: "metric" }), "bottom-left");
 
     map.on("load", async () => {
+      // sources must exist before their layers are added
       map.addSource(SUBURB_SOURCE, { type: "geojson", data: EMPTY_COLLECTION as SourceData });
       map.addSource(MESH_SOURCE, { type: "geojson", data: EMPTY_COLLECTION as SourceData });
 
@@ -263,6 +276,7 @@ export function MelbourneMapPage() {
       });
 
       try {
+        // load lightweight suburb outlines for the first view
         const response = await fetch(`${API_BASE}/map/suburbs`);
         if (!response.ok) throw new Error("Melbourne map geometry is unavailable.");
         const data = (await response.json()) as MapFeatureCollection;
@@ -282,6 +296,7 @@ export function MelbourneMapPage() {
     };
   }, [accessToken, openBlock, openSuburb]);
 
+  // restore the full melbourne suburb view
   function showAllSuburbs() {
     const map = mapRef.current;
     if (!map) return;
@@ -324,10 +339,18 @@ export function MelbourneMapPage() {
               <>
                 <div className="mesh-detail-heading"><span>Selected mesh block</span><strong>{selectedBlock.block.mb_code16}</strong></div>
                 <dl>
-                  <div><dt>Surface heat</dt><dd>{selectedBlock.block.uhi_mean?.toFixed(1) ?? "—"}°C</dd></div>
-                  <div><dt>Tree canopy</dt><dd>{selectedBlock.block.canopy_pct?.toFixed(1) ?? "—"}%</dd></div>
-                  <div><dt>Category</dt><dd>{selectedBlock.block.mb_category || "Not classified"}</dd></div>
-                  <div><dt>Population</dt><dd>{selectedBlock.block.persons?.toLocaleString() ?? "Not published"}</dd></div>
+                  <div className="metric-item">
+                    <dt>Surface heat</dt>
+                    <MetricHelp label="About surface heat">2018 satellite surface heat above non-urban land.</MetricHelp>
+                    <dd>{selectedBlock.block.uhi_mean == null ? "Not available" : `${selectedBlock.block.uhi_mean.toFixed(1)}°C`}</dd>
+                  </div>
+                  <div className="metric-item">
+                    <dt>Tree canopy</dt>
+                    <MetricHelp label="About tree canopy">Tree canopy cover in this block, measured in 2018.</MetricHelp>
+                    <dd>{selectedBlock.block.canopy_pct == null ? "Not available" : `${selectedBlock.block.canopy_pct.toFixed(1)}%`}</dd>
+                  </div>
+                  <div className="metric-item"><dt>Category</dt><dd>{selectedBlock.block.mb_category || "Not classified"}</dd></div>
+                  <div className="metric-item"><dt>Population</dt><dd>{selectedBlock.block.persons?.toLocaleString() ?? "Not published"}</dd></div>
                 </dl>
               </>
             )}
@@ -347,6 +370,17 @@ export function MelbourneMapPage() {
   );
 }
 
+// show a compact hover explanation for a metric
+function MetricHelp({ children, label }: { children: string; label: string }) {
+  return (
+    <span className="metric-help" role="img" aria-label={label}>
+      ?
+      <span className="metric-help-tooltip">{children}</span>
+    </span>
+  );
+}
+
+// search suburbs and pass the selected result upward
 function SuburbSearch({ onSelect }: { onSelect: (result: SearchResult) => void }) {
   const [query, setQuery] = useState(() => {
     const saved = sessionStorage.getItem("coolchange-suburb-query") || "";
@@ -358,6 +392,7 @@ function SuburbSearch({ onSelect }: { onSelect: (result: SearchResult) => void }
   const [loading, setLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
 
+  // request matches after the user pauses typing
   useEffect(() => {
     const value = query.trim();
     if (value.length < 2) {
@@ -367,6 +402,7 @@ function SuburbSearch({ onSelect }: { onSelect: (result: SearchResult) => void }
     }
 
     const controller = new AbortController();
+    // wait briefly so each keystroke does not create a request
     const timer = window.setTimeout(async () => {
       setLoading(true);
       try {
@@ -390,6 +426,7 @@ function SuburbSearch({ onSelect }: { onSelect: (result: SearchResult) => void }
     };
   }, [query]);
 
+  // commit a search result and close the list
   function choose(result: SearchResult) {
     setQuery(result.sa2_name);
     setResults([]);
@@ -397,6 +434,7 @@ function SuburbSearch({ onSelect }: { onSelect: (result: SearchResult) => void }
     onSelect(result);
   }
 
+  // support keyboard navigation in the result list
   function handleKeys(event: KeyboardEvent<HTMLInputElement>) {
     if (!results.length) return;
     if (event.key === "ArrowDown") {
